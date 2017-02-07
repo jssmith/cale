@@ -16,29 +16,30 @@ class memory_log : public log<T> {
 public:
   caf::expected<offset> append(const T& x) override {
     xs_.push_back(x);
-    return off_++;
+    return xs_.size() - 1;
   }
 
   caf::expected<T> get(offset off) const override {
-    if (off < off_)
+    if (off < xs_.size())
       return xs_[off];
     return ec::invalid_offset;
   }
 
   caf::expected<std::vector<T>> get(offset begin, offset end) const override {
     CAF_ASSERT(begin < end);
-    auto n = end - begin;
-    if (n > off_)
+    if (end > xs_.size())
       return ec::invalid_offset;
+    if (begin == 0 && end == xs_.size())
+      return xs_;
     std::vector<T> result;
     result.reserve(end - begin);
-    std::copy_n(xs_.begin() + begin, n, std::back_inserter(result));
+    std::copy(xs_.begin() + begin, xs_.begin() + end,
+              std::back_inserter(result));
     return result;
   }
 
 private:
-  offset off_ = 0;
-  std::deque<T> xs_;
+  std::vector<T> xs_;
 };
 
 } // namespace cale

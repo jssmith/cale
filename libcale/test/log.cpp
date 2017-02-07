@@ -36,12 +36,17 @@ CAF_TEST(memory log - get) {
 
 CAF_TEST(memory log - range get) {
   CAF_MESSAGE("out of bounds access");
-  auto xs = log.get(2, 10);
+  auto xs = log.get(4, 9);
   CAF_REQUIRE(!xs);
   CAF_CHECK_EQUAL(xs, ec::invalid_offset);
+  CAF_MESSAGE("subset");
   xs = log.get(1, 5);
   CAF_REQUIRE(xs);
   CAF_CHECK_EQUAL(*xs, (std::vector<int>{43, 44, 45, 46}));
+  CAF_MESSAGE("full copy");
+  xs = log.get(0, 5);
+  CAF_REQUIRE(xs);
+  CAF_CHECK_EQUAL(*xs, (std::vector<int>{42, 43, 44, 45, 46}));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
