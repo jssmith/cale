@@ -5,6 +5,7 @@
 
 #include "cale/error.hpp"
 #include "cale/log.hpp"
+#include "cale/memory_log.hpp"
 #include "cale/topic.hpp"
 
 using namespace caf;
@@ -25,36 +26,6 @@ struct actor_system_fixture {
   caf::actor_system_config config;
   caf::actor_system system;
   caf::scoped_actor self;
-};
-
-template <class T>
-class dummy_log : public log<T> {
-public:
-  expected<offset> append(const T& x) override {
-    xs_.push_back(x);
-    return off_++;
-  }
-
-  expected<T> get(offset off) const override {
-    if (off < off_)
-      return xs_[off];
-    return ec::invalid_offset;
-  }
-
-  expected<std::vector<T>> get(offset begin, offset end) const override {
-    CAF_ASSERT(begin < end);
-    auto n = end - begin;
-    if (n > off_)
-      return ec::invalid_offset;
-    std::vector<T> result;
-    result.reserve(end - begin);
-    std::copy_n(xs_.begin() + begin, n, std::back_inserter(result));
-    return result;
-  }
-
-private:
-  offset off_ = 0;
-  std::deque<T> xs_;
 };
 
 behavior accumulator(event_based_actor* self) {
@@ -83,7 +54,7 @@ behavior accumulator(event_based_actor* self) {
 CAF_TEST_FIXTURE_SCOPE(topic_tests, actor_system_fixture)
 
 CAF_TEST(basic topic operations) {
-  auto t = self->spawn(topic<dummy_log<int>>, "test");
+  auto t = self->spawn(topic<memory_log<int>>, "test");
   CAF_MESSAGE("append values");
   for (auto x : {10, 11, 12, 13, 14, 15})
     self->request(t, infinite, append_atom::value, x).receive(
