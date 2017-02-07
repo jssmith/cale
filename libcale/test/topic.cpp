@@ -81,10 +81,18 @@ CAF_TEST(basic topic operations) {
   CAF_MESSAGE("perform a range lookup");
   // Composition: f * g = f(g(x))
   auto pipeline = self->spawn(accumulator) * actor_cast<actor>(t);
-  self->send(pipeline, stream_atom::value, offset{1}, offset{3});
+  self->send(pipeline, stream_atom::value, offset{4}, offset{7});
+  CAF_MESSAGE("appending after pipeline started");
+  self->request(t, infinite, append_atom::value, 20).receive(
+    [=](offset off) {
+      CAF_CHECK_EQUAL(off, offset{6});
+    },
+    error_handler()
+  );
+  CAF_MESSAGE("getting pipeline result");
   self->receive(
     [](int x) {
-      CAF_CHECK_EQUAL(x, 11 + 12);
+      CAF_CHECK_EQUAL(x, 14 + 15 + 20);
     },
     error_handler()
   );

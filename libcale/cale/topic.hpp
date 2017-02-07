@@ -39,7 +39,10 @@ topic(typename topic_actor<T>::template stateful_pointer<topic_state<T>> self,
   self->state.log = std::make_unique<Log>();
   return {
     [=](append_atom, const T& x) {
-      return self->state.log->append(x);
+      auto result = self->state.log->append(x);
+      if (result)
+        self->trigger_downstreams();
+      return result;
     },
     [=](get_atom, offset off) {
       return self->state.log->get(off);
@@ -54,6 +57,8 @@ topic(typename topic_actor<T>::template stateful_pointer<topic_state<T>> self,
         [=](offset& pos, downstream<T>& out, size_t possible) {
           auto available = end - pos;
           auto n = std::min(offset{possible}, available);
+          if (n == 0)
+            return;
           auto x = self->state.log->get(pos, pos + n);
           if (!x) {
             out.abort(self->current_sender(), x.error());
